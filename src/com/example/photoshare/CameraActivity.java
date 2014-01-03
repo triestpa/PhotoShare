@@ -7,6 +7,7 @@ import java.util.Date;
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.os.Bundle;
@@ -21,6 +22,7 @@ import android.widget.FrameLayout;
 import com.example.parse.PrsPhoto;
 import com.parse.ParseException;
 import com.parse.ParseFile;
+import com.parse.ParseUser;
 import com.parse.SaveCallback;
 
 public class CameraActivity extends Activity {
@@ -34,7 +36,6 @@ public class CameraActivity extends Activity {
 	protected static int cameraID = Camera.CameraInfo.CAMERA_FACING_BACK;
 	private Handler mHandler = new Handler();
 	protected String flashStatus = Camera.Parameters.FLASH_MODE_OFF;
-
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -57,7 +58,7 @@ public class CameraActivity extends Activity {
 		FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
 		preview.addView(mPreview);
 	}
-	
+
 	public void cameraInit(int camID) {
 
 		mCamera = getCameraInstance(camID);
@@ -192,29 +193,46 @@ public class CameraActivity extends Activity {
 
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
-			
+
 			Log.i("TAG", "picture taken");
-			
+
 			// Resize photo from camera byte array
 			Bitmap prsImg = BitmapFactory.decodeByteArray(data, 0, data.length);
-			Bitmap prsImgScaled = Bitmap.createScaledBitmap(prsImg, 200, 200
+			Bitmap prsImgScaled = Bitmap.createScaledBitmap(prsImg, 1000, 1000
 					* prsImg.getHeight() / prsImg.getWidth(), false);
 
-			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			prsImgScaled.compress(Bitmap.CompressFormat.JPEG, 100, bos);
+			Matrix matrix = new Matrix();
 
+			/*
+			 * All of the photos are sideways and for some reason the
+			 * front-facing photos are upside-down compared to the back facing
+			 */
+			if (cameraID == Camera.CameraInfo.CAMERA_FACING_BACK)
+				matrix.postRotate(90);
+			else
+				matrix.postRotate(270);
+
+			Bitmap prsImgScaledRotated = Bitmap.createBitmap(prsImgScaled, 0,
+					0, prsImgScaled.getWidth(), prsImgScaled.getHeight(),
+					matrix, true);
+
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			prsImgScaledRotated.compress(Bitmap.CompressFormat.JPEG, 100, bos);
 			byte[] scaledData = bos.toByteArray();
-			
+
 			ParseFile prsFile = new ParseFile("photo.jpg", scaledData);
-			
+
 			PrsPhoto prsPhoto = new PrsPhoto();
 			prsPhoto.setPhotoFile(prsFile);
-			
+
 			// Create a media file name
 			String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
 					.format(new Date());
-			
+
 			prsPhoto.setTitle(timeStamp);
+			
+			prsPhoto.setAuthor(ParseUser.getCurrentUser());
+			
 			prsPhoto.saveInBackground(new SaveCallback() {
 
 				public void done(ParseException e) {
