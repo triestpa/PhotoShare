@@ -105,16 +105,11 @@ public class CameraPreview extends SurfaceView implements
 		} catch (Exception e) {
 			// ignore: tried to stop a non-existent preview
 		}
-
 		
-		// set preview size and make any resize, rotate or
-		// reformatting changes here
-
 		// start preview with new settings
 		try {
 			mCamera.setPreviewDisplay(mHolder);
 			mCamera.startPreview();
-
 		} catch (Exception e) {
 			Log.d(TAG, "Error starting camera preview: " + e.getMessage());
 		}

@@ -1,16 +1,15 @@
 package com.example.photoshare;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
+
+import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.hardware.Camera.PictureCallback;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 import android.view.Menu;
@@ -19,15 +18,23 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.FrameLayout;
 
+import com.example.parse.PrsPhoto;
+import com.parse.ParseException;
+import com.parse.ParseFile;
+import com.parse.SaveCallback;
+
 public class CameraActivity extends Activity {
 	protected static Camera mCamera = null;
 	private CameraPreview mPreview;
+
 	protected String TAG = "main activity";
 	public static final int MEDIA_TYPE_IMAGE = 1;
+
 	protected Boolean preview_active;
 	protected static int cameraID = Camera.CameraInfo.CAMERA_FACING_BACK;
 	private Handler mHandler = new Handler();
 	protected String flashStatus = Camera.Parameters.FLASH_MODE_OFF;
+
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -50,7 +57,7 @@ public class CameraActivity extends Activity {
 		FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
 		preview.addView(mPreview);
 	}
-
+	
 	public void cameraInit(int camID) {
 
 		mCamera = getCameraInstance(camID);
@@ -106,7 +113,7 @@ public class CameraActivity extends Activity {
 				if (cameraID == Camera.CameraInfo.CAMERA_FACING_BACK) {
 					// switch to front facing camera
 					cameraInit(Camera.CameraInfo.CAMERA_FACING_FRONT);
-					//the flash must be off if front camera is in use
+					// the flash must be off if front camera is in use
 					flashStatus = Camera.Parameters.FLASH_MODE_OFF;
 					Log.i(TAG, "flash off");
 					Button flashButton = (Button) findViewById(R.id.button_flash);
@@ -185,75 +192,40 @@ public class CameraActivity extends Activity {
 
 		@Override
 		public void onPictureTaken(byte[] data, Camera camera) {
-
+			
 			Log.i("TAG", "picture taken");
+			
+			// Resize photo from camera byte array
+			Bitmap prsImg = BitmapFactory.decodeByteArray(data, 0, data.length);
+			Bitmap prsImgScaled = Bitmap.createScaledBitmap(prsImg, 200, 200
+					* prsImg.getHeight() / prsImg.getWidth(), false);
 
-			File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
-			if (pictureFile == null) {
-				Log.d(TAG,
-						"Error creating media file, check storage permissions");
-				return;
-			}
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			prsImgScaled.compress(Bitmap.CompressFormat.JPEG, 100, bos);
 
-			if (data.length == 0) {
-				Log.d(TAG, "No picture data recived");
-			}
+			byte[] scaledData = bos.toByteArray();
+			
+			ParseFile prsFile = new ParseFile("photo.jpg", scaledData);
+			
+			PrsPhoto prsPhoto = new PrsPhoto();
+			prsPhoto.setPhotoFile(prsFile);
+			
+			// Create a media file name
+			String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
+					.format(new Date());
+			
+			prsPhoto.setTitle(timeStamp);
+			prsPhoto.saveInBackground(new SaveCallback() {
 
-			try {
-				FileOutputStream fos = new FileOutputStream(pictureFile);
-				fos.write(data);
-				fos.close();
-
-				if (!pictureFile.exists()) {
-					Log.d("TAG", "File not saved correctly");
+				public void done(ParseException e) {
+					if (e != null) {
+						Log.e("Save To Parse", e.getMessage());
+					} else {
+						Log.i("Save To Parse", "Parse Upload Successful");
+					}
 				}
-
-			} catch (FileNotFoundException e) {
-				Log.d(TAG, "File not found: " + e.getMessage());
-			} catch (IOException e) {
-				Log.d(TAG, "Error accessing file: " + e.getMessage());
-			}
+			});
 		}
 
 	};
-
-	// This part is for storing the photo
-	/** Create a File for saving an image or video */
-	private static File getOutputMediaFile(int type) {
-		// To be safe, you should check that the SDCard is mounted
-		// using Environment.getExternalStorageState() before doing this.
-
-		File mediaStorageDir = new File(
-				Environment
-						.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-				"SimpleCameraApp");
-		// This location works best if you want the created images to be shared
-		// between applications and persist after your app has been uninstalled.
-
-		// Create the storage directory if it does not exist
-		if (!mediaStorageDir.exists()) {
-			if (!mediaStorageDir.mkdirs()) {
-				Log.d("MyCameraApp", "failed to create directory");
-				return null;
-			}
-		}
-
-		// Create a media file name
-		String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss")
-				.format(new Date());
-		File mediaFile;
-		String filepath = mediaStorageDir.getPath() + File.separator + "IMG_"
-				+ timeStamp + ".jpg";
-		if (type == MEDIA_TYPE_IMAGE) {
-			mediaFile = new File(filepath);
-			Log.d("photo save", "Saved in: " + filepath);
-
-		} else {
-			return null;
-		}
-
-		return mediaFile;
-	}
-
 }
-
