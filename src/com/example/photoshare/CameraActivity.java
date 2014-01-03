@@ -5,6 +5,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
@@ -49,6 +50,7 @@ public class CameraActivity extends Activity {
 		setPictureButton();
 		setCameraSwapButton();
 		setFlashButton();
+		setBrowseButton();
 	}
 
 	@Override
@@ -137,6 +139,22 @@ public class CameraActivity extends Activity {
 				toggleFlash();
 			}
 		});
+	}
+
+	public void setBrowseButton() {
+		Button browseButton = (Button) findViewById(R.id.browse_photos);
+		browseButton.setOnClickListener(new View.OnClickListener() {
+
+			@Override
+			public void onClick(View v) {
+				startPhotoBrowse();
+			}
+		});
+	}
+	
+	public void startPhotoBrowse(){
+		Intent intent = new Intent(this, PhotoBrowse.class);
+		startActivity(intent);
 	}
 
 	public void toggleFlash() {
@@ -230,9 +248,9 @@ public class CameraActivity extends Activity {
 					.format(new Date());
 
 			prsPhoto.setTitle(timeStamp);
-			
+
 			prsPhoto.setAuthor(ParseUser.getCurrentUser());
-			
+
 			prsPhoto.saveInBackground(new SaveCallback() {
 
 				public void done(ParseException e) {
