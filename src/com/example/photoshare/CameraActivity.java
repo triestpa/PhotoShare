@@ -216,7 +216,7 @@ public class CameraActivity extends Activity {
 
 			// Resize photo from camera byte array
 			Bitmap prsImg = BitmapFactory.decodeByteArray(data, 0, data.length);
-			Bitmap prsImgScaled = Bitmap.createScaledBitmap(prsImg, 1000, 1000
+			Bitmap prsImgScaled = Bitmap.createScaledBitmap(prsImg, 400, 400
 					* prsImg.getHeight() / prsImg.getWidth(), false);
 
 			Matrix matrix = new Matrix();
